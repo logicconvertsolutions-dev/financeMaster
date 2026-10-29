@@ -1,0 +1,22 @@
+{
+  "name": "finance-master",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "build:phone": "vite build --mode phone",
+    "preview:phone": "vite preview --mode phone --outDir dist-phone"
+  },
+  "dependencies": {
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "recharts": "^2.15.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.0",
+    "pyodide": "314.0.7",
+    "vite": "^6.0.0"
+  }
+}

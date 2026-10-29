@@ -11,3 +11,4 @@ __pycache__/
 node_modules/
 frontend/dist/
 frontend/dist-phone/
+frontend/.pyodide-cache/
