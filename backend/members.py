@@ -10,7 +10,7 @@ import shutil
 import sqlite3
 from pathlib import Path
 
-from .config import ROOT, STATEMENTS_DIR
+from .config import STATEMENTS_DIR, abs_path, rel_path
 
 _MONTH_FOLDER = re.compile(r"^\d{4}-\d{2}$")
 RESERVED = {"_deleted"}
@@ -133,9 +133,9 @@ def _move_file(conn: sqlite3.Connection, src: Path, dest: Path) -> int:
     dest.parent.mkdir(parents=True, exist_ok=True)
     if dest.exists():
         dest = dest.with_name(f"{dest.stem} (moved){dest.suffix}")
-    old = src.relative_to(ROOT).as_posix()
+    old = rel_path(src)
     shutil.move(str(src), str(dest))
-    new = dest.relative_to(ROOT).as_posix()
+    new = rel_path(dest)
     conn.execute("UPDATE statements SET path = ? WHERE path = ?", (new, old))
     conn.execute("UPDATE files SET path = ? WHERE path = ?", (new, old))
     return 1
@@ -172,7 +172,7 @@ def organize_by_month(conn: sqlite3.Connection) -> int:
         "SELECT path, max(period_end) period_end FROM statements WHERE status IN ('parsed', 'needs_review') "
         "AND period_end IS NOT NULL GROUP BY path").fetchall()
     for r in rows:
-        src = ROOT / r["path"]
+        src = abs_path(r["path"])
         month = r["period_end"][:7]
         if not src.exists() or not _MONTH_FOLDER.match(src.parent.name) or src.parent.name == month:
             continue

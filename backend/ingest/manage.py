@@ -8,7 +8,7 @@ import sqlite3
 from datetime import date, timedelta
 from pathlib import Path
 
-from ..config import ROOT, STATEMENTS_DIR
+from ..config import STATEMENTS_DIR, abs_path, rel_path
 from .model import ParsedTx
 from .scanner import DUPLICATE_WINDOW_DAYS, _take_duplicate
 
@@ -19,8 +19,8 @@ def deleted_dir() -> Path:
     return STATEMENTS_DIR / DELETED_DIR_NAME
 
 
-def _move_to_deleted(rel_path: str) -> str | None:
-    src = ROOT / rel_path
+def _move_to_deleted(rel: str) -> str | None:
+    src = abs_path(rel)
     if not src.exists():
         return None
     target_dir = deleted_dir()
@@ -31,7 +31,7 @@ def _move_to_deleted(rel_path: str) -> str | None:
         dest = target_dir / f"{src.stem} ({i}){src.suffix}"
         i += 1
     shutil.move(str(src), str(dest))
-    return dest.relative_to(ROOT).as_posix()
+    return rel_path(dest)
 
 
 def delete_statement_file(conn: sqlite3.Connection, statement_id: int) -> dict:

@@ -7,7 +7,7 @@ from datetime import date, timedelta
 from pathlib import Path
 
 from .. import categorize, transfers
-from ..config import ROOT, STATEMENT_EXTENSIONS, STATEMENTS_DIR
+from ..config import STATEMENT_EXTENSIONS, STATEMENTS_DIR, abs_path, rel_path
 from . import passwords
 from . import rbc_export
 from .csvparse import parse_table
@@ -56,11 +56,11 @@ def scan(conn: sqlite3.Connection) -> dict:
             continue
         if "_deleted" in path.relative_to(STATEMENTS_DIR).parts:
             continue  # files removed from the dashboard
-        rel = path.relative_to(ROOT).as_posix()
+        rel = rel_path(path)
         digest = _file_hash(conn, path, rel)
         existing = conn.execute("SELECT id, path FROM statements WHERE file_hash = ?", (digest,)).fetchone()
         if existing:
-            if existing["path"] != rel and not (ROOT / existing["path"]).exists():
+            if existing["path"] != rel and not abs_path(existing["path"]).exists():
                 conn.execute("UPDATE statements SET path = ? WHERE id = ?", (rel, existing["id"]))  # file moved
             continue
         summary["new"] += 1
@@ -102,7 +102,7 @@ def upgrade_old_parses(conn: sqlite3.Connection) -> int:
         "SELECT id, path FROM statements WHERE status = 'parsed' "
         "AND NOT EXISTS (SELECT 1 FROM transactions t WHERE t.statement_id = statements.id)"
     ).fetchall():
-        if not (ROOT / s["path"]).exists():
+        if not abs_path(s["path"]).exists():
             conn.execute("DELETE FROM balance_snapshots WHERE statement_id = ?", (s["id"],))
             conn.execute("DELETE FROM statements WHERE id = ?", (s["id"],))
 
@@ -111,7 +111,7 @@ def upgrade_old_parses(conn: sqlite3.Connection) -> int:
         "SELECT * FROM statements WHERE status IN ('parsed', 'needs_review') AND path LIKE '%.pdf' "
         "AND (parser IN ('generic', 'generic-2', 'generic-3') OR parser LIKE 'generic%+reviewed')"
     ).fetchall():
-        path = ROOT / s["path"]
+        path = abs_path(s["path"])
         if not path.exists():
             continue
         stored_ok = _stored_reconciles(conn, s)
@@ -324,7 +324,7 @@ def statement_member(conn: sqlite3.Connection, statement_id: int) -> int:
     from .. import members
 
     row = conn.execute("SELECT path FROM statements WHERE id = ?", (statement_id,)).fetchone()
-    return members.member_for_path(conn, ROOT / row["path"]) if row else members.primary_id(conn)
+    return members.member_for_path(conn, abs_path(row["path"])) if row else members.primary_id(conn)
 
 
 def commit_statement(conn: sqlite3.Connection, statement_id: int, parsed: ParsedStatement,

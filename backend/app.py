@@ -14,7 +14,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 from . import analytics, categorize, checks, coverage, family, insights, insurance, members, people, recurring, scope, snapshot, transfers
-from .config import BACKUP_DIR, DATA_DIR, FRONTEND_DIST, ROOT, STATEMENT_EXTENSIONS, STATEMENTS_DIR, code_version
+from .config import BACKUP_DIR, DATA_DIR, FRONTEND_DIST, STATEMENT_EXTENSIONS, STATEMENTS_DIR, abs_path, code_version, rel_path
 from .db import init_db, rows, session
 from .ingest import manage, passwords, scanner
 from .ingest.model import ParsedStatement, ParsedTx
@@ -811,11 +811,11 @@ def list_statements():
             "FROM statements s LEFT JOIN accounts a ON a.id = s.account_id "
             "ORDER BY s.status = 'parsed', s.status = 'ignored', coalesce(s.period_end, '') DESC, s.id DESC"))
         wanted = scope.current()
-        owners = {s["id"]: members.member_for_path(conn, ROOT / s["path"]) for s in out} if wanted else {}
+        owners = {s["id"]: members.member_for_path(conn, abs_path(s["path"])) for s in out} if wanted else {}
     if wanted:
         out = [s for s in out if owners[s["id"]] in wanted]
     for s in out:
-        s["file_exists"] = (ROOT / s["path"]).exists()
+        s["file_exists"] = (abs_path(s["path"])).exists()
     return out
 
 
@@ -851,7 +851,7 @@ def unlock(statement_id: int, body: UnlockBody):
         s = conn.execute("SELECT path FROM statements WHERE id = ?", (statement_id,)).fetchone()
         if not s:
             raise HTTPException(404)
-        result = scanner.parse_statement_file(conn, statement_id, ROOT / s["path"], password=body.password)
+        result = scanner.parse_statement_file(conn, statement_id, abs_path(s["path"]), password=body.password)
         if result == "locked":
             raise HTTPException(400, "That password didn't work.")
         if body.remember:
@@ -868,7 +868,7 @@ def reparse(statement_id: int):
             raise HTTPException(404)
         for table in ("transactions", "balance_snapshots", "holdings"):
             conn.execute(f"DELETE FROM {table} WHERE statement_id = ?", (statement_id,))
-        result = scanner.parse_statement_file(conn, statement_id, ROOT / s["path"])
+        result = scanner.parse_statement_file(conn, statement_id, abs_path(s["path"]))
         scanner.refresh_derived(conn)
         return {"status": result}
 
@@ -966,7 +966,7 @@ async def upload(files: list[UploadFile] = File(...), member_id: int | None = No
             i += 1
         with dest.open("wb") as out:
             shutil.copyfileobj(f.file, out)
-        saved.append(dest.relative_to(ROOT).as_posix())
+        saved.append(rel_path(dest))
     with session() as conn:
         summary = scanner.scan(conn)
     return {"saved": saved, **summary}
@@ -1000,7 +1000,7 @@ def backup():
         z.write(db_copy, "data/finance.db")
         for p in STATEMENTS_DIR.rglob("*"):
             if p.is_file():
-                z.write(p, p.relative_to(ROOT).as_posix())
+                z.write(p, rel_path(p))
     db_copy.unlink()
     return {"path": str(archive)}
 

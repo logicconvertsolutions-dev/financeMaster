@@ -19,9 +19,9 @@ INACTIVE_DAYS = 45  # no statement for this long before a month: the account isn
 
 
 def _file_date(rel: str) -> date | None:
-    from .config import ROOT
+    from .config import abs_path
     try:
-        return date.fromtimestamp((ROOT / rel).stat().st_mtime)
+        return date.fromtimestamp(abs_path(rel).stat().st_mtime)
     except OSError:
         return None
 
