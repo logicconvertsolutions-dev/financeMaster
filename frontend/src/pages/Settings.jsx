@@ -1,9 +1,9 @@
 import { useMemo, useState } from "react";
-import { api } from "../api";
+import { IS_WEB, api } from "../api";
 import { CategoryOptions } from "../components/CategoryOptions";
 import { ConsistencyCheck } from "../components/Checks";
 import { Card, PageHead, Tabs, hashParams } from "../components/ui";
-import { useApi, useApp } from "../context";
+import { useApi, useApp, useWeb } from "../context";
 import { money } from "../format";
 
 function PhoneSnapshotSettings() {
@@ -241,7 +241,7 @@ export function SettingsPage() {
       {e === "data" && (
         <div className="stack">
           <ConsistencyCheck />
-          <PhoneSnapshotSettings />
+          {!IS_WEB && <PhoneSnapshotSettings />}
           <YourData />
         </div>
       )}
@@ -843,6 +843,7 @@ function Categories() {
 
 function YourData() {
   const { toast } = useApp();
+  const web = useWeb();
   const { data, reload } = useApi("/passwords");
   const r = useApi("/status").data;
   return (
@@ -853,10 +854,20 @@ function YourData() {
           marginTop: 0,
         }}
       >
-        Everything stays on this PC. Statements folder: <code>{r?.statements_dir}</code>. Database:{" "}
-        <code>data/finance.db</code>.
+        {web ? (
+          <>
+            Statements are read from your Google Drive folder <b>{web.folder.name}</b>. Your data is saved in the same folder,
+            encrypted with your passphrase, as <code>finance-snapshot.fmsnap</code>. To keep a backup, download that file from
+            Drive; <code>tools/snapshot_to_db.py</code> turns it back into a database on a PC.
+          </>
+        ) : (
+          <>
+            Everything stays on this PC. Statements folder: <code>{r?.statements_dir}</code>. Database:{" "}
+            <code>data/finance.db</code>.
+          </>
+        )}
       </p>
-      <button
+      {!web && <button
         className="btn"
         onClick={async () => {
           const a = await api.post("/backup");
@@ -864,7 +875,7 @@ function YourData() {
         }}
       >
         Create backup (.zip)
-      </button>
+      </button>}
       <h3
         style={{
           marginTop: 18,
@@ -878,7 +889,7 @@ function YourData() {
             {data.map((a) => (
               <tr key={a}>
                 <td>{a}</td>
-                <td className="muted small">stored in Windows Credential Manager</td>
+                <td className="muted small">{web ? "saved in your encrypted data" : "stored in Windows Credential Manager"}</td>
                 <td>
                   <button
                     className="btn small danger"

@@ -1,7 +1,7 @@
-// Vite plugin for the phone build (`npm run build:phone`):
-// - phone-only <head> tags and a strict Content-Security-Policy,
-// - the Pyodide runtime plus the wheels FastAPI needs, served from the app itself (no CDN at run time),
-// - sw.js with the list of every file to keep on the phone.
+// Vite plugin for the web build (`npm run build:web`, what Vercel runs):
+// - web-only <head> tags and a strict Content-Security-Policy (the app itself, Google sign-in and the Drive API only),
+// - the Pyodide runtime plus every wheel the backend needs, served from the app itself (no CDN at run time),
+// - sw.js with the list of every file to keep on the device.
 import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
@@ -9,6 +9,7 @@ import { fileURLToPath } from "node:url";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const CORE = ["pyodide.mjs", "pyodide.asm.mjs", "pyodide.asm.wasm", "python_stdlib.zip", "pyodide-lock.json"];
+const GOOGLE_SIGN_IN = "https://accounts.google.com";
 const sha256 = (data, enc = "hex") => createHash("sha256").update(data).digest(enc);
 
 /** Wheels for `packages` and everything they depend on, per pyodide-lock.json. */
@@ -27,25 +28,40 @@ function wheelsFor(lock, packages) {
   return [...seen.values()].filter((p) => p.file_name.endsWith(".whl"));
 }
 
-async function cachedWheel(version, pkg, cacheDir) {
-  const file = path.join(cacheDir, pkg.file_name);
-  if (fs.existsSync(file) && sha256(fs.readFileSync(file)) === pkg.sha256) return fs.readFileSync(file);
-  const url = `https://cdn.jsdelivr.net/pyodide/v${version}/full/${pkg.file_name}`;
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`Couldn't download ${url} (${res.status})`);
-  const data = Buffer.from(await res.arrayBuffer());
-  if (sha256(data) !== pkg.sha256) throw new Error(`${pkg.file_name}: checksum doesn't match pyodide-lock.json`);
-  fs.mkdirSync(cacheDir, { recursive: true });
-  fs.writeFileSync(file, data);
-  return data;
+/** A wheel from the cache, else from $PYODIDE_DIST (an unpacked Pyodide release), else downloaded. Checked by sha256. */
+async function fetchWheel(file, sha, urls, cacheDir) {
+  const cached = path.join(cacheDir, file);
+  const local = [cached, process.env.PYODIDE_DIST && path.join(process.env.PYODIDE_DIST, file)].filter(Boolean);
+  for (const f of local) {
+    if (fs.existsSync(f)) {
+      const data = fs.readFileSync(f);
+      if (sha256(data) !== sha) continue;
+      if (f !== cached) {
+        fs.mkdirSync(cacheDir, { recursive: true });
+        fs.writeFileSync(cached, data);
+      }
+      return data;
+    }
+  }
+  for (const url of urls) {
+    const res = await fetch(url).catch(() => null);
+    if (!res?.ok) continue;
+    const data = Buffer.from(await res.arrayBuffer());
+    if (sha256(data) !== sha) throw new Error(`${file}: checksum doesn't match (${url})`);
+    fs.mkdirSync(cacheDir, { recursive: true });
+    fs.writeFileSync(cached, data);
+    return data;
+  }
+  throw new Error(`Couldn't get ${file} from ${urls.join(" or ")}`);
 }
 
-export default function phone({ pyodideVersion, packages = ["fastapi"] }) {
+export default function web({ pyodideVersion, packages, extraWheels, driveApi }) {
   const pyodideDir = path.resolve(here, "../node_modules/pyodide");
   const cacheDir = path.resolve(here, "../.pyodide-cache", pyodideVersion);
+  const driveOrigin = new URL(driveApi).origin;
   let publicFiles = [];
   return {
-    name: "finance-master-phone",
+    name: "finance-master-web",
     apply: "build",
     configResolved(config) {
       const dir = config.publicDir;
@@ -58,11 +74,12 @@ export default function phone({ pyodideVersion, packages = ["fastapi"] }) {
         const inline = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((m) => `'sha256-${sha256(m[1], "base64")}'`);
         const csp = [
           "default-src 'self'",
-          `script-src 'self' 'wasm-unsafe-eval' ${inline.join(" ")}`,
+          `script-src 'self' 'wasm-unsafe-eval' ${inline.join(" ")} ${GOOGLE_SIGN_IN}/gsi/client`,
           "worker-src 'self'",
-          "connect-src 'self'",
+          `connect-src 'self' ${driveOrigin} ${GOOGLE_SIGN_IN}/gsi/`,
+          `frame-src ${GOOGLE_SIGN_IN}/gsi/`,
           "img-src 'self' data:",
-          "style-src 'self' 'unsafe-inline'",
+          `style-src 'self' 'unsafe-inline' ${GOOGLE_SIGN_IN}/gsi/style`,
           "object-src 'none'",
           "base-uri 'self'",
           "form-action 'none'",
@@ -87,7 +104,11 @@ export default function phone({ pyodideVersion, packages = ["fastapi"] }) {
       }
       const lock = JSON.parse(fs.readFileSync(path.join(pyodideDir, "pyodide-lock.json"), "utf8"));
       const runtime = [];
-      for (const pkg of wheelsFor(lock, packages)) runtime.push([pkg.file_name, await cachedWheel(pyodideVersion, pkg, cacheDir)]);
+      for (const pkg of wheelsFor(lock, packages)) {
+        const urls = [`https://cdn.jsdelivr.net/pyodide/v${pyodideVersion}/full/${pkg.file_name}`];
+        runtime.push([pkg.file_name, await fetchWheel(pkg.file_name, pkg.sha256, urls, cacheDir)]);
+      }
+      for (const w of extraWheels) runtime.push([w.file, await fetchWheel(w.file, w.sha256, [w.url], cacheDir)]);
       for (const f of CORE) runtime.push([f, fs.readFileSync(path.join(pyodideDir, f))]);
       runtime.sort((a, b) => a[0].localeCompare(b[0]));
       for (const [name, source] of runtime) {
@@ -99,7 +120,8 @@ export default function phone({ pyodideVersion, packages = ["fastapi"] }) {
       const build = sha256(precache.join("\n") + assets.map((f) => bundle[f].code ?? bundle[f].source).join("")).slice(0, 12);
       const sw = fs.readFileSync(path.join(here, "sw.js"), "utf8")
         .replace("__BUILD__", JSON.stringify(build))
-        .replace("__PRECACHE__", JSON.stringify(precache));
+        .replace("__PRECACHE__", JSON.stringify(precache))
+        .replace("__ALLOWED__", JSON.stringify([GOOGLE_SIGN_IN, driveOrigin]));
       this.emitFile({ type: "asset", fileName: "sw.js", source: sw });
     },
   };

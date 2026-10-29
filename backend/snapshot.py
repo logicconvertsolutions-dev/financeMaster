@@ -15,6 +15,7 @@ import json
 import os
 import sqlite3
 import string
+import sys
 import struct
 import threading
 import unicodedata
@@ -201,6 +202,8 @@ def write(conn: sqlite3.Connection) -> dict | None:
 def write_soon(delay: float = 20.0) -> None:
     """Rewrite the snapshot a little after the last change (edits often come in bursts)."""
     global _timer
+    if sys.platform == "emscripten":
+        return  # the web app saves the database to Drive itself (and browsers have no threads)
     if _timer:
         _timer.cancel()
     _timer = threading.Timer(delay, _write_in_background)

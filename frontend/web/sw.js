@@ -1,8 +1,9 @@
-// Phone app service worker (filled in at build time by the phone plugin in vite.config.js).
-// 1. Keeps every file of the app on the phone so it opens offline.
-// 2. Blocks any request to another site, from the page or the engine: the app only ever talks to itself.
+// Web app service worker (filled in at build time by web/plugin.js).
+// 1. Keeps every file of the app on the device so it opens fast, and offline.
+// 2. Blocks any request to another site except Google sign-in and the Drive API.
 const BUILD = __BUILD__;
 const PRECACHE = __PRECACHE__;
+const ALLOWED = __ALLOWED__;
 const CACHE = `finance-master-${BUILD}`;
 
 self.addEventListener("install", (event) => {
@@ -20,8 +21,8 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin) {
-    event.respondWith(Response.error());
-    return;
+    if (!ALLOWED.includes(url.origin)) event.respondWith(Response.error());
+    return; // Google: straight to the network, never cached
   }
   if (event.request.method !== "GET") return;
   if (event.request.mode === "navigate") {

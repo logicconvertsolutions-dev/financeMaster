@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { IS_PHONE, VIEW_ONLY, api, setScope } from "./api";
+import { CONFLICT, IS_WEB, OFFLINE, api, setScope } from "./api";
 import { Logo } from "./components/Logo";
 import { ThemeSwitch } from "./components/ThemeSwitch";
 import { ViewingPicker } from "./components/ViewingPicker";
-import { AppContext } from "./context";
+import { AppContext, useWeb } from "./context";
 import { AccountsPage } from "./pages/Accounts";
 import { DebtsPage } from "./pages/Debts";
 import { FamilyPage } from "./pages/Family";
@@ -16,7 +16,7 @@ import { ReviewPage } from "./pages/Review";
 import { SettingsPage } from "./pages/Settings";
 import { SpendingPage } from "./pages/Spending";
 import { StatementsPage } from "./pages/Statements";
-import { PhoneStatus } from "./phone/PhoneStatus";
+import { WebStatus } from "./web/WebStatus";
 
 const PAGES = [
   {
@@ -86,8 +86,6 @@ const PAGES = [
   },
 ];
 
-// the phone is view-only: no statements to import, nothing to set up
-const PHONE_HIDDEN = IS_PHONE ? ["sep", "inbox", "settings"] : [];
 
 function useRoute() {
   const e = () => window.location.hash.replace(/^#\/?/, "") || "overview";
@@ -136,24 +134,28 @@ export function App() {
     window.setTimeout(() => l((E) => (E === A ? null : E)), 5000);
   }, []);
   const g = useCallback(() => o((A) => A + 1), []);
+  const web = useWeb();
+  useEffect(() => {
+    if (web?.firstToast) {
+      m(web.firstToast); // e.g. new statements found while opening
+    }
+  }, []);
   useEffect(() => {
     const A = (E) => {
-      if (E.reason instanceof Error && E.reason.message === VIEW_ONLY) {
+      if (E.reason instanceof Error && [OFFLINE, CONFLICT].includes(E.reason.message)) {
         E.preventDefault();
-        m(VIEW_ONLY);
+        m(E.reason.message);
       }
     };
     window.addEventListener("unhandledrejection", A);
     return () => window.removeEventListener("unhandledrejection", A);
   }, [m]);
   useEffect(() => {
-    // PC: pick up statements dropped into the folder while the dashboard was closed or in the background
-    if (IS_PHONE) {
-      return;
-    }
-    let last = 0;
+    // pick up statements put into the folder while the dashboard was closed or in the background
+    // (on the web, opening already synced with Drive, and each sync lists the whole folder: once a minute at most)
+    let last = IS_WEB ? Date.now() : 0;
     const A = () => {
-      if (Date.now() - last < 10000) {
+      if (document.hidden || Date.now() - last < (IS_WEB ? 60000 : 10000)) {
         return;
       }
       last = Date.now();
@@ -169,7 +171,11 @@ export function App() {
     };
     A();
     window.addEventListener("focus", A);
-    return () => window.removeEventListener("focus", A);
+    document.addEventListener("visibilitychange", A);
+    return () => {
+      window.removeEventListener("focus", A);
+      document.removeEventListener("visibilitychange", A);
+    };
   }, [m, g]);
   useEffect(() => {
     api
@@ -211,10 +217,7 @@ export function App() {
   }, [b, h]);
   const x = S.single ? `/upload?member_id=${S.single.id}` : "/upload";
   useEffect(() => {
-    // PC: drop statement files anywhere on the window to import them
-    if (IS_PHONE) {
-      return;
-    }
+    // drop statement files anywhere on the window to import them
     let depth = 0;
     const hasFiles = (E) => Array.from(E.dataTransfer?.types ?? []).includes("Files");
     const enter = (E) => {
@@ -312,7 +315,7 @@ export function App() {
             </button>
           </div>
           <ViewingPicker members={h.members} groups={h.groups} ids={b} onChange={w} onGroupsChanged={g} go={a} />
-          {PAGES.filter((A) => (A.id !== "family" || h.members.length > 1) && !PHONE_HIDDEN.includes(A.id)).map((A) =>
+          {PAGES.filter((A) => (A.id !== "family" || h.members.length > 1)).map((A) =>
             A.id === "sep" ? (
               <div className="nav-sep" key="sep" />
             ) : (
@@ -327,7 +330,7 @@ export function App() {
             ),
           )}
           <div className="sidebar-foot">
-            <PhoneStatus />
+            <WebStatus />
             <ThemeSwitch />
           </div>
         </nav>

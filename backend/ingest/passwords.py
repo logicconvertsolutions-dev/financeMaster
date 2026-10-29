@@ -1,14 +1,22 @@
 """Remembered PDF passwords, kept in Windows Credential Manager (never in the database).
 
 The database only stores the labels, so we know which Credential Manager entries to try.
+The web app has no Credential Manager: there the passwords sit in the settings table, because its
+database only ever leaves the browser encrypted with your passphrase.
 """
 import json
 import sqlite3
+import sys
 
 import keyring
 
 SERVICE = "finance-dashboard-pdf"
 _LABELS_KEY = "pdf_password_labels"
+WEB = sys.platform == "emscripten"
+
+
+def _web_key(label: str) -> str:
+    return f"pdf_password:{label}"
 
 
 def labels(conn: sqlite3.Connection) -> list[str]:
@@ -27,7 +35,11 @@ def remembered(conn: sqlite3.Connection) -> list[str]:
     out = []
     for label in labels(conn):
         try:
-            pw = keyring.get_password(SERVICE, label)
+            if WEB:
+                row = conn.execute("SELECT value FROM settings WHERE key = ?", (_web_key(label),)).fetchone()
+                pw = row["value"] if row else None
+            else:
+                pw = keyring.get_password(SERVICE, label)
         except Exception:
             pw = None
         if pw:
@@ -36,7 +48,11 @@ def remembered(conn: sqlite3.Connection) -> list[str]:
 
 
 def remember(conn: sqlite3.Connection, label: str, password: str) -> None:
-    keyring.set_password(SERVICE, label, password)
+    if WEB:
+        conn.execute("INSERT INTO settings(key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+                     (_web_key(label), password))
+    else:
+        keyring.set_password(SERVICE, label, password)
     names = labels(conn)
     if label not in names:
         _save_labels(conn, [*names, label])
@@ -44,7 +60,10 @@ def remember(conn: sqlite3.Connection, label: str, password: str) -> None:
 
 def forget(conn: sqlite3.Connection, label: str) -> None:
     try:
-        keyring.delete_password(SERVICE, label)
+        if WEB:
+            conn.execute("DELETE FROM settings WHERE key = ?", (_web_key(label),))
+        else:
+            keyring.delete_password(SERVICE, label)
     except Exception:
         pass
     _save_labels(conn, [n for n in labels(conn) if n != label])

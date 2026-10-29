@@ -1,8 +1,10 @@
-// The phone build answers /api calls from the backend running in its engine worker; the PC build asks the server.
-export const IS_PHONE = import.meta.env.MODE === "phone";
+// The web build (Vercel) answers /api calls from the backend running in its engine worker, synced with your
+// Google Drive folder; the PC build asks the local server (run.py).
+export const IS_WEB = import.meta.env.MODE === "web";
 
-export const VIEW_ONLY =
-  "The phone app is view-only. Make changes on your PC; they reach your phone with the next snapshot.";
+// Why the web app can't save a change right now (shown as a toast, see App.jsx).
+export const OFFLINE = "You're viewing the copy saved on this device. Connect to Google Drive to make changes.";
+export const CONFLICT = "Another device saved newer data. Reload to continue.";
 
 let scopeIds = null;
 
@@ -23,9 +25,9 @@ async function request(method, path, body) {
   if (method === "GET") {
     path = withScope(path);
   }
-  if (IS_PHONE) {
-    const { phoneRequest } = await import("./phone/engine");
-    return phoneRequest(method, path);
+  if (IS_WEB) {
+    const session = await import("./web/session");
+    return session.request(method, path, body);
   }
   const init = { method };
   if (body instanceof FormData) {
@@ -52,7 +54,11 @@ export const api = {
   put: (path, body) => request("PUT", path, body),
   patch: (path, body) => request("PATCH", path, body),
   del: (path) => request("DELETE", path),
-  upload: (path, files) => {
+  upload: async (path, files) => {
+    if (IS_WEB) {
+      const session = await import("./web/session");
+      return session.upload(path, files);
+    }
     const form = new FormData();
     Array.from(files).forEach((f) => form.append("files", f));
     return request("POST", path, form);

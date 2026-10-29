@@ -8,7 +8,11 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import pdfplumber
-import pikepdf
+
+try:
+    import pikepdf
+except ImportError:  # the web app (Pyodide): pdfminer decrypts the PDF itself
+    pikepdf = None
 
 
 class PdfLocked(Exception):
@@ -24,16 +28,36 @@ class Line:
         return self.text
 
 
-def _open_bytes(path: Path, password: str | None) -> bytes:
+def _open_bytes(path: Path, password: str | None) -> tuple[bytes, str]:
+    """The PDF's bytes, and the password still needed to read them ("" once pikepdf has removed it)."""
+    if pikepdf is None:
+        data = path.read_bytes()
+        try:
+            with pdfplumber.open(io.BytesIO(data), password=password or ""):
+                pass
+        except Exception as e:
+            if _wrong_password(e):
+                raise PdfLocked(str(e)) from e
+            raise
+        return data, password or ""
     try:
         with pikepdf.open(path, password=password or "") as pdf:
             if not pdf.is_encrypted:
-                return path.read_bytes()
+                return path.read_bytes(), ""
             buf = io.BytesIO()
             pdf.save(buf)  # saving drops the encryption; only ever held in memory
-            return buf.getvalue()
+            return buf.getvalue(), ""
     except pikepdf.PasswordError as e:
         raise PdfLocked(str(e)) from e
+
+
+def _wrong_password(e: BaseException | None) -> bool:
+    """pdfminer's PDFPasswordIncorrect, possibly wrapped by pdfplumber."""
+    while e is not None:
+        if type(e).__name__ == "PDFPasswordIncorrect":
+            return True
+        e = e.__cause__ or e.__context__ or next((a for a in getattr(e, "args", ()) if isinstance(a, BaseException)), None)
+    return False
 
 
 def is_locked(path: Path) -> bool:
@@ -68,9 +92,9 @@ def _line_positions(text: str, chars: list[dict]) -> list[float] | None:
 
 def extract_layout(path: Path, password: str | None = None) -> list[list[Line]]:
     """Text lines per page, in reading order, with per-character right edges."""
-    data = _open_bytes(path, password)
+    data, still_needed = _open_bytes(path, password)
     pages: list[list[Line]] = []
-    with pdfplumber.open(io.BytesIO(data)) as pdf:
+    with pdfplumber.open(io.BytesIO(data), password=still_needed) as pdf:
         for page in pdf.pages:
             lines = []
             for ln in page.extract_text_lines(layout=False, strip=True, return_chars=True,

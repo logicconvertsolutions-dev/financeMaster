@@ -1,7 +1,7 @@
 {
   "name": "Finance Master",
   "short_name": "Finance",
-  "description": "Your finances, from the locked snapshot your PC saves. View-only, private, works offline.",
+  "description": "Your finances, from your statements in Google Drive. Private: no server sees your data.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

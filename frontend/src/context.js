@@ -45,6 +45,6 @@ export function useApi(e) {
   };
 }
 
-export const PhoneContext = createContext(null);
+export const WebContext = createContext(null);
 
-export const usePhone = () => useContext(PhoneContext);
+export const useWeb = () => useContext(WebContext);

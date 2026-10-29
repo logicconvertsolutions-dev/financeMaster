@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { api } from "../api";
+import { IS_WEB, api } from "../api";
 import { Card, Loading, PageHead } from "../components/ui";
-import { useApi, useApp } from "../context";
+import { useApi, useApp, useWeb } from "../context";
 import { moneyCents, monthLabel } from "../format";
 
 const COVERAGE_CELLS = {
@@ -163,7 +163,10 @@ export function StatementsPage() {
   const [o, u] = useState("");
   const l =
     viewing.members.find((x) => String(x.id) === o) ?? viewing.single ?? viewing.members.find((x) => x.is_primary);
-  const c = ["statements", l?.folder].filter(Boolean).join("\\") + "\\";
+  const web = useWeb();
+  const c = web
+    ? [web.folder.name, l?.folder].filter(Boolean).join("/") + "/ in Google Drive"
+    : ["statements", l?.folder].filter(Boolean).join("\\") + "\\";
   const [d, f] = useState(null);
   const [p, h] = useState(new Set());
   const [y, b] = useState(false);
@@ -632,7 +635,11 @@ function UnlockForm({ id, path, onDone }) {
         style={{
           margin: 0,
         }}
-      >{`The password is used only on this PC to open the file. If you tick "remember", it's stored in Windows Credential Manager (not in the app's database) and tried automatically on future statements.`}</p>
+      >
+        {IS_WEB
+          ? `The password is used only on this device to open the file. If you tick "remember", it's saved in your encrypted data in Google Drive and tried automatically on future statements.`
+          : `The password is used only on this PC to open the file. If you tick "remember", it's stored in Windows Credential Manager (not in the app's database) and tried automatically on future statements.`}
+      </p>
       <div className="row">
         <input
           type="password"

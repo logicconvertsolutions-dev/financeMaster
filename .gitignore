@@ -10,5 +10,5 @@ __pycache__/
 .venv/
 node_modules/
 frontend/dist/
-frontend/dist-phone/
+frontend/dist-web/
 frontend/.pyodide-cache/
