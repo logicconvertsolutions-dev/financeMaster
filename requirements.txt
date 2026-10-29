@@ -1,0 +1,11 @@
+# PC app (Python 3.12+). The phone app runs the same backend in Pyodide with only fastapi + pydantic.
+fastapi>=0.136
+pydantic>=2.12
+uvicorn>=0.30
+python-multipart>=0.0.20   # statement uploads
+pdfplumber>=0.11           # reading PDF statements
+pikepdf>=9.0               # unlocking password-protected PDFs
+openpyxl>=3.1              # .xlsx exports
+xlrd>=2.0                  # .xls exports
+keyring>=25.0              # snapshot passphrase in Windows Credential Manager
+cryptography>=43.0         # snapshot encryption

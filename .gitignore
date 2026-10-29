@@ -1,0 +1,14 @@
+# your financial data never goes into git
+data/
+statements/
+backups/
+*.fmsnap
+*.db
+
+__pycache__/
+*.pyc
+.venv/
+node_modules/
+frontend/dist/
+frontend/dist-web/
+frontend/.pyodide-cache/
