@@ -33,6 +33,12 @@ export const status = () => s?.status ?? null;
 
 const dirname = (p) => (p.includes("/") ? p.slice(0, p.lastIndexOf("/")) : "");
 const basename = (p) => p.slice(p.lastIndexOf("/") + 1);
+// Has someone else saved the database since we last loaded or saved it? Drive's `version` can't tell: Drive
+// bumps it by itself a moment after an upload (revision and metadata processing), so comparing it made the
+// second save on the same device look like another device's. The content checksum only changes when the bytes
+// do, and every save re-encrypts with a fresh nonce, so another device's save always changes it.
+const sameSnapshot = (a, b) => (a?.md5Checksum ?? null) === (b?.md5Checksum ?? null);
+
 const statementsIn = (tree) => [...tree.files.values()].filter((f) => f.md5Checksum && STATEMENT.test(f.name));
 
 /** Is there a saved database in this folder? */
@@ -108,7 +114,7 @@ export async function syncNow() {
   const tree = await drive.listTree(s.folderId);
   s.folders = tree.folders;
   const remote = tree.files.get(SNAPSHOT_NAME);
-  if ((remote?.version ?? null) !== (s.snapshot?.version ?? null)) {
+  if (!sameSnapshot(remote, s.snapshot)) {
     emit({ conflict: true });
     throw new Error(CONFLICT);
   }
@@ -228,7 +234,7 @@ async function mirror() {
 async function save() {
   if (s.snapshot) {
     const remote = await drive.getMeta(s.snapshot.id);
-    if (remote.version !== s.snapshot.version) {
+    if (!sameSnapshot(remote, s.snapshot)) {
       emit({ conflict: true });
       throw new Error(CONFLICT);
     }
