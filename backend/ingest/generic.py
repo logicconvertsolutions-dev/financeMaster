@@ -21,7 +21,7 @@ from .model import ParsedStatement, ParsedTx
 from .pdftext import Line
 
 # Bump when parsing changes so statements imported by an older version are re-read on startup.
-PARSER_VERSION = "generic-4"
+PARSER_VERSION = "generic-5"
 
 MONTHS = {
     "JAN": 1, "JANUARY": 1, "FEB": 2, "FEBRUARY": 2, "MAR": 3, "MARCH": 3, "APR": 4, "APRIL": 4,
@@ -58,7 +58,7 @@ INVESTMENT_KEEP = re.compile(r"CONTRIBUTION|DEPOSIT|DIVIDEND|INTEREST|WITHDRAWAL
 INVESTMENT_OUT = re.compile(r"WITHDRAWAL|TRANSFER OUT|FEE", re.I)
 
 _ANY_AMOUNT = re.compile(
-    r"(?<![\w.,/])(\(?-?\s?\$?\s?(?:\d{1,3}(?:,\d{3})+|\d+)\.\d{2}\)?(?:\s?(?:CR|DR)\b)?)(?![\w.,/%])", re.I)
+    r"(?<![\w.,/])(\(?-?\s?\$?\s?(?:\d{1,3}(?:,\d{3})+|\d+)\.\d{2}\)?(?:\s?(?:CR|DR)\b|-(?![\w.]))?)(?![\w.,/%])", re.I)
 _BAL_OPEN = re.compile(r"(OPENING|PREVIOUS|BEGINNING|STARTING)\s+(STATEMENT\s+|ACCOUNT\s+)?BALANCE|BALANCE\s+FORWARD", re.I)
 _BAL_CLOSE = re.compile(r"(CLOSING|NEW|ENDING|TOTAL)\s+(STATEMENT\s+|ACCOUNT\s+)?BALANCE|STATEMENT BALANCE|BALANCE AT END", re.I)
 _PRINCIPAL_BAL = re.compile(r"PRINCIPAL BALANCE (?:ON|AS OF)\b", re.I)
@@ -95,14 +95,29 @@ def _date_from(kind: str, m: re.Match) -> tuple[int | None, int, int] | None:
     return _mk(int(g[2]) if g[2] else None, month, day)
 
 
+_REF_PREFIX = re.compile(r"\d{3,4}\s+(?=[A-Z])", re.I)
+
+
 def match_leading_date(line: str) -> tuple[tuple[int | None, int, int] | None, str]:
-    """If the line starts with a date, return (date parts, rest of line)."""
-    for kind, rx in _DATE_FORMS:
-        m = rx.match(line)
-        if m:
-            parts = _date_from(kind, m)
-            if parts:
-                return parts, line[m.end():].strip()
+    """If the line starts with a date, return (date parts, rest of line).
+
+    A short reference number in front of a month name is skipped: Scotiabank card statements number
+    every row ("001 Aug 18 Aug 18 PAYMENT FROM ...").
+    """
+    for candidate in (line, None):
+        if candidate is None:
+            ref = _REF_PREFIX.match(line)
+            if not ref:
+                break
+            candidate = line[ref.end():]
+        for kind, rx in _DATE_FORMS:
+            if candidate is not line and kind != "mdy_name":
+                continue
+            m = rx.match(candidate)
+            if m:
+                parts = _date_from(kind, m)
+                if parts:
+                    return parts, candidate[m.end():].strip()
     return None, line
 
 
@@ -148,6 +163,15 @@ def find_period(text: str) -> tuple[date | None, date | None]:
             break
     if best:
         return best
+    # "Opening Balance on September 18, 2026 ... Closing Balance on October 17, 2026" (Scotiabank)
+    edges = []
+    for rx in (_BAL_OPEN, _BAL_CLOSE):
+        m = re.search(rf"(?:{rx.pattern})\s*(?:ON|AS OF|AS AT|,)\s*(?P<when>.{{6,25}})", flat, re.I)
+        ds = find_dates(m.group("when")) if m else []
+        edges.append(_resolve(ds[0][1], date(ds[0][1][0], 12, 31)) if ds and ds[0][0] == 0 and ds[0][1][0] else None)
+    start, end = edges
+    if start and end and timedelta(0) < end - start < timedelta(days=100):
+        return start, end
     m = re.search(r"STATEMENT DATE\s*:?\s*(.{6,25})", flat, re.I)
     if m:
         ds = find_dates(m.group(1))
@@ -207,7 +231,7 @@ def _amount_after(line: str, rx: re.Pattern) -> float | None:
 _COLUMN_ROLES = [
     ("fee", re.compile(r"^(INTEREST|FEES?|INSURANCE|CHARGES?)\b")),
     ("out", re.compile(r"^(WITHDRAW|DEBITS?\b|CHEQUES?\b|PURCHASES|ADVANCES|MONEY OUT|FUNDS OUT|PAID OUT)")),
-    ("in", re.compile(r"^(DEPOSITS?\b|CREDITS?\b|PAYMENTS?\b|MONEY IN|FUNDS IN|PAID IN)")),
+    ("in", re.compile(r"^(DEPOSIT(S|ED)?\b|CREDITS?\b|PAYMENTS?\b|MONEY IN|FUNDS IN|PAID IN)")),
     ("balance", re.compile(r"^BALANCE")),
     ("amount", re.compile(r"^AMOUNT")),
 ]
@@ -398,21 +422,43 @@ def _collect_entries(lines: list[Line], ref: date) -> list[dict]:
     # after a date line ("August 24 to September 23") would be read as transactions.
     in_table = False
     section: str | None = None   # "in" inside a payments/credits section (amounts printed without "-")
+    # Text lines right after a row, without a date or amount, usually finish that row's description
+    # (Scotiabank prints the payee there: "MB-Transfer to 100.00 966.27" / "Credit Card"). They are
+    # held, and only added once the next dated row starts; anything else in between (a page footer,
+    # a new header, an undated amount) means they weren't part of that row, and they're dropped.
+    trailing: list[str] = []
+    can_trail = False
+
+    def attach_trailing() -> None:
+        nonlocal can_trail
+        if trailing and entries:
+            entries[-1]["desc"] = re.sub(r"\s+", " ", " ".join([entries[-1]["desc"], *trailing]))
+        trailing.clear()
+        can_trail = False
+
+    def drop_trailing() -> None:
+        nonlocal can_trail
+        trailing.clear()
+        can_trail = False
+
     for ln in lines:
         line = ln.text
         header = _column_header(ln)
         if header:
+            drop_trailing()
             columns = header
             pending = None
             in_table = False  # a table only starts at its first dated row (report tables have none)
             continue
         heading = _section_of(line)
         if heading:
+            drop_trailing()
             section = heading if heading != "out" else None
             pending = None
             continue
         parts, rest = match_leading_date(line)
         if parts:
+            attach_trailing()  # the previous row is complete
             # a second (posting) date directly after the first, as on credit card statements
             parts2, rest2 = match_leading_date(rest)
             if parts2:
@@ -444,9 +490,16 @@ def _collect_entries(lines: list[Line], ref: date) -> list[dict]:
                 pending = desc
             elif not parts and pending is not None and len(line) < 60 and not SUMMARY_WORDS.search(line):
                 pending = f"{pending} {line}"
+            elif (not parts and can_trail and len(trailing) < 2 and len(line) < 60
+                  and re.search(r"[A-Za-z]{2}", line) and not SUMMARY_WORDS.search(line)
+                  and not re.search(r"CONTINUED|\bPAGE\b", line, re.I)):
+                trailing.append(line)
+                pending = None
             else:
+                drop_trailing()
                 pending = None
             continue
+        drop_trailing()  # a row with an amount: the held text was not the previous row's
         if cur_date is None or not (parts or in_table or pending is not None):
             continue
         full = f"{pending} {desc}".strip() if pending else desc
@@ -461,6 +514,7 @@ def _collect_entries(lines: list[Line], ref: date) -> list[dict]:
         in_table = True
         entries.append({"date": cur_date.isoformat(), "desc": re.sub(r"\s+", " ", full), "amounts": amounts,
                         "roles": roles, "section": section})
+        can_trail = True
     return entries
 
 
