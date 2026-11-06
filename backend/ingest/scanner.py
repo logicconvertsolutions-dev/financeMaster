@@ -109,7 +109,8 @@ def upgrade_old_parses(conn: sqlite3.Connection) -> int:
     redone = 0
     for s in conn.execute(
         "SELECT * FROM statements WHERE status IN ('parsed', 'needs_review') AND path LIKE '%.pdf' "
-        "AND (parser IN ('generic', 'generic-2', 'generic-3') OR parser LIKE 'generic%+reviewed')"
+        "AND ((parser LIKE 'generic%' AND parser != ?) OR parser LIKE 'generic%+reviewed')",
+        (PARSER_VERSION,),
     ).fetchall():
         path = abs_path(s["path"])
         if not path.exists():

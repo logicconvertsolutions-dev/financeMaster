@@ -90,6 +90,16 @@ def detect_last4(text: str) -> str | None:
             ident = re.sub(r"[^A-Z0-9]", "", m.group(1).upper())
             if len(ident) >= 5:
                 return ident[-4:]
+    # the label at the end of one line, the number on the next (Scotiabank chequing:
+    # "Your account number:" / "NORTH YORK ON 73502 18941 29" -- the address shares the line)
+    lines = text.splitlines()
+    for i, line in enumerate(lines[:-1]):
+        if re.search(r"ACCOUNT\s+(?:NUMBER|NO\.?|#)\s*:?\s*$", line, re.IGNORECASE):
+            runs = re.findall(r"(?<![\w-])\d[\d -]{5,}\d(?![\w-])", lines[i + 1])
+            runs = [re.sub(r"\D", "", r) for r in runs]
+            runs = [r for r in runs if len(r) >= 7]
+            if runs:
+                return runs[-1][-4:]
     # masked card numbers like "4520 **** **** 1234"
     m = re.search(r"(?:\*{2,}|X{2,}|•{2,})\s?(\d{4})\b", text)
     return m.group(1) if m else None
