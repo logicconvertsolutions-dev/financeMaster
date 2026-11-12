@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CONFLICT, IS_WEB, OFFLINE, api, setScope } from "./api";
 import { Logo } from "./components/Logo";
+import { NavIcon } from "./components/NavIcon";
 import { ThemeSwitch } from "./components/ThemeSwitch";
 import { ViewingPicker } from "./components/ViewingPicker";
 import { AppContext, useWeb } from "./context";
@@ -86,6 +87,9 @@ const PAGES = [
   },
 ];
 
+
+// The pages on the phone's bottom bar; everything else is under "More" (the menu).
+const TABS = ["overview", "spending", "networth", "inbox"].map((id) => PAGES.find((p) => p.id === id));
 
 function useRoute() {
   const e = () => window.location.hash.replace(/^#\/?/, "") || "overview";
@@ -320,7 +324,8 @@ export function App() {
               <div className="nav-sep" key="sep" />
             ) : (
               <button className={`nav-item ${O.id === A.id ? "active" : ""}`} onClick={() => a(A.id)} key={A.id}>
-                {A.label}
+                <NavIcon id={A.id} />
+                <span className="nav-label">{A.label}</span>
                 {A.id === "inbox" && j > 0 && (
                   <span className="count-pill" aria-label={`${j} need attention`}>
                     {j}
@@ -338,6 +343,24 @@ export function App() {
         <main>
           <P go={a} />
         </main>
+        <nav className="tabbar" aria-label="Main pages">
+          {TABS.map((A) => (
+            <button
+              className={`tab-item ${O.id === A.id ? "active" : ""}`}
+              aria-current={O.id === A.id ? "page" : undefined}
+              onClick={() => a(A.id)}
+              key={A.id}
+            >
+              <NavIcon id={A.id} size={22} />
+              <span>{A.label}</span>
+              {A.id === "inbox" && j > 0 && <span className="menu-dot" aria-label={`${j} statements need attention`} />}
+            </button>
+          ))}
+          <button className="tab-item" onClick={() => r(true)} aria-expanded={n} aria-controls="sidebar">
+            <NavIcon id="more" size={22} />
+            <span>More</span>
+          </button>
+        </nav>
       </div>
       {f && (
         <div

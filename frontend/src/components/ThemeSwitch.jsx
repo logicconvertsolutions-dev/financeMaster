@@ -11,15 +11,15 @@ function applyTheme(e) {
 export function ThemeSwitch() {
   const [e, t] = useState(() => {
     try {
-      return localStorage.getItem("theme-v2") || "light";
+      return localStorage.getItem("theme-v3") || "dark";
     } catch {
-      return "light";
+      return "dark";
     }
   });
   useEffect(() => {
     applyTheme(e);
     try {
-      localStorage.setItem("theme-v2", e);
+      localStorage.setItem("theme-v3", e);
     } catch {}
   }, [e]);
   return (
