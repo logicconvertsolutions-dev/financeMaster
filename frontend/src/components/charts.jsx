@@ -1,3 +1,4 @@
+import { Cell, Pie, PieChart, Tooltip } from "recharts";
 import { compactMoney, money } from "../format";
 
 const SERIES_COLORS = [
@@ -75,7 +76,7 @@ export function ChartTooltip({
             <i
               className="swatch"
               style={{
-                background: d.color,
+                background: d.color ?? d.payload?.fill,
               }}
             />
             {d.name}
@@ -122,11 +123,14 @@ export function Legend({ items }) {
   }
 }
 
-export function BarList({ rows, format = money, color = "var(--s1)", onClick }) {
+/** `colors`: true gives each row the next series colour; an object maps row names to colours. */
+export function BarList({ rows, format = money, color = "var(--s1)", colors, onClick }) {
+  const tint = (name, index) =>
+    colors === true ? SERIES_COLORS[index % SERIES_COLORS.length] : (colors?.[name] ?? (colors ? OTHER_COLOR : color));
   const a = Math.max(1, ...rows.map((i) => Math.max(i.value, i.budget ?? 0)));
   return (
     <div className="bar-list">
-      {rows.map((i) => (
+      {rows.map((i, index) => (
         <div
           className="bar-row"
           title={`${i.name}: ${format(i.value)}${i.budget ? ` (budget ${format(i.budget)})` : ""}`}
@@ -150,7 +154,7 @@ export function BarList({ rows, format = money, color = "var(--s1)", onClick }) 
               className="bar-fill"
               style={{
                 width: `${(Math.max(i.value, 0) / a) * 100}%`,
-                background: i.budget && i.value > i.budget ? "var(--critical)" : color,
+                color: i.budget && i.value > i.budget ? "var(--critical)" : tint(i.name, index),
               }}
             />
             {i.budget ? (
@@ -174,6 +178,40 @@ export function BarList({ rows, format = money, color = "var(--s1)", onClick }) 
           </span>
         </div>
       ))}
+    </div>
+  );
+}
+
+/** A ring of slices with the total in the middle. `colors` maps slice names to colours. */
+export function Donut({ rows, colors, total, label, format = money, size = 200, onClick }) {
+  return (
+    <div className="donut" style={{ width: size, height: size }}>
+      <PieChart width={size} height={size}>
+        <Pie
+          data={rows}
+          dataKey="value"
+          nameKey="name"
+          innerRadius="62%"
+          outerRadius="96%"
+          startAngle={90}
+          endAngle={-270}
+          paddingAngle={rows.length > 1 ? 3 : 0}
+          cornerRadius={7}
+          stroke="none"
+          isAnimationActive={false}
+          onClick={(slice) => onClick?.(slice.name)}
+          style={{ cursor: onClick ? "pointer" : undefined }}
+        >
+          {rows.map((row) => (
+            <Cell fill={colors[row.name] ?? OTHER_COLOR} key={row.name} />
+          ))}
+        </Pie>
+        <Tooltip content={<ChartTooltip />} />
+      </PieChart>
+      <div className="donut-centre">
+        <div className="big-num">{format(total)}</div>
+        {label && <div className="small muted">{label}</div>}
+      </div>
     </div>
   );
 }

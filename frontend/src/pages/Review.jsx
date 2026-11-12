@@ -375,8 +375,8 @@ export function ReviewPage({ go }) {
               }}
               content={<ChartTooltip labelFormat={(h) => monthLabel(h, true)} />}
             />
-            <Bar dataKey="income" name="Income" fill="var(--s1)" radius={[4, 4, 0, 0]} maxBarSize={24} />
-            <Bar dataKey="expenses" name="Spending" fill="var(--s2)" radius={[4, 4, 0, 0]} maxBarSize={24} />
+            <Bar dataKey="income" name="Income" fill="var(--s1)" radius={[12, 12, 3, 3]} maxBarSize={24} />
+            <Bar dataKey="expenses" name="Spending" fill="var(--s3)" radius={[12, 12, 3, 3]} maxBarSize={24} />
           </BarChart>
         </ResponsiveContainer>
         <Legend
@@ -387,7 +387,7 @@ export function ReviewPage({ go }) {
             },
             {
               name: "Spending",
-              color: "var(--s2)",
+              color: "var(--s3)",
             },
           ]}
         />

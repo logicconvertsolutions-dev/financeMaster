@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CONFLICT, IS_WEB, OFFLINE, api, setScope } from "./api";
+import { ChartDefs } from "./components/ChartDefs";
 import { Logo } from "./components/Logo";
 import { NavIcon } from "./components/NavIcon";
 import { ThemeSwitch } from "./components/ThemeSwitch";
@@ -293,6 +294,7 @@ export function App() {
         viewing: S,
       }}
     >
+      <ChartDefs />
       <div className={`app ${n ? "menu-open" : ""}`}>
         <header className="topbar">
           <button

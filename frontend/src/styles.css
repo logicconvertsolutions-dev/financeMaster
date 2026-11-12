@@ -83,13 +83,16 @@
     --other: #5e5448;
     --shadow: none;
     --backdrop:
-      radial-gradient(55vw 55vh at 5% 0%, rgba(96, 150, 70, 0.34), transparent 70%),
-      radial-gradient(45vw 50vh at 100% 15%, rgba(214, 150, 60, 0.24), transparent 70%),
-      radial-gradient(60vw 55vh at 60% 105%, rgba(70, 120, 60, 0.22), transparent 70%),
-      linear-gradient(160deg, #1c150e, #0b0806);
-    --card-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.04));
-    --card-border: rgba(255, 255, 255, 0.13);
-    --card-hi: rgba(255, 255, 255, 0.28);
+      radial-gradient(circle at 66% -4%, rgba(104, 190, 96, 0.85) 0, rgba(104, 190, 96, 0.5) 7vw, transparent 15vw),
+      radial-gradient(circle at 98% 14%, rgba(232, 160, 44, 0.8) 0, rgba(214, 140, 40, 0.42) 12vw, transparent 26vw),
+      radial-gradient(circle at -3% 60%, rgba(96, 184, 92, 0.6) 0, rgba(96, 184, 92, 0.3) 8vw, transparent 17vw),
+      radial-gradient(circle at 78% 108%, rgba(70, 140, 70, 0.42) 0, transparent 24vw),
+      linear-gradient(160deg, #17110b, #080605);
+    --card-bg:
+      linear-gradient(115deg, transparent 58%, rgba(255, 255, 255, 0.06) 58%, rgba(255, 255, 255, 0.012) 82%, transparent 82%),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.13), rgba(255, 255, 255, 0.05));
+    --card-border: rgba(255, 255, 255, 0.16);
+    --card-hi: rgba(255, 255, 255, 0.4);
     --card-shadow: 0 14px 40px rgba(0, 0, 0, 0.38);
     --field: #2b231b;
     --control: rgba(255, 255, 255, 0.08);
@@ -97,7 +100,7 @@
     --sidebar-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.04));
     --hero-bg: linear-gradient(135deg, #7dbb62 0%, #4f8a3c 48%, #2f5f27 100%);
     --accent-grad: linear-gradient(180deg, #94cc7b, #69a653);
-    --glow: 60%;
+    --glow: 70%;
   }
 }
 :root[data-theme="dark"] {
@@ -132,13 +135,16 @@
   --other: #5e5448;
   --shadow: none;
   --backdrop:
-    radial-gradient(55vw 55vh at 5% 0%, rgba(96, 150, 70, 0.34), transparent 70%),
-    radial-gradient(45vw 50vh at 100% 15%, rgba(214, 150, 60, 0.24), transparent 70%),
-    radial-gradient(60vw 55vh at 60% 105%, rgba(70, 120, 60, 0.22), transparent 70%),
-    linear-gradient(160deg, #1c150e, #0b0806);
-  --card-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.04));
-  --card-border: rgba(255, 255, 255, 0.13);
-  --card-hi: rgba(255, 255, 255, 0.28);
+    radial-gradient(circle at 66% -4%, rgba(104, 190, 96, 0.85) 0, rgba(104, 190, 96, 0.5) 7vw, transparent 15vw),
+    radial-gradient(circle at 98% 14%, rgba(232, 160, 44, 0.8) 0, rgba(214, 140, 40, 0.42) 12vw, transparent 26vw),
+    radial-gradient(circle at -3% 60%, rgba(96, 184, 92, 0.6) 0, rgba(96, 184, 92, 0.3) 8vw, transparent 17vw),
+    radial-gradient(circle at 78% 108%, rgba(70, 140, 70, 0.42) 0, transparent 24vw),
+    linear-gradient(160deg, #17110b, #080605);
+  --card-bg:
+    linear-gradient(115deg, transparent 58%, rgba(255, 255, 255, 0.06) 58%, rgba(255, 255, 255, 0.012) 82%, transparent 82%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.13), rgba(255, 255, 255, 0.05));
+  --card-border: rgba(255, 255, 255, 0.16);
+  --card-hi: rgba(255, 255, 255, 0.4);
   --card-shadow: 0 14px 40px rgba(0, 0, 0, 0.38);
   --field: #2b231b;
   --control: rgba(255, 255, 255, 0.08);
@@ -146,7 +152,7 @@
   --sidebar-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.04));
   --hero-bg: linear-gradient(135deg, #7dbb62 0%, #4f8a3c 48%, #2f5f27 100%);
   --accent-grad: linear-gradient(180deg, #94cc7b, #69a653);
-  --glow: 60%;
+  --glow: 70%;
 }
 * {
   box-sizing: border-box;
@@ -233,8 +239,8 @@ a {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 7px 10px;
-  border-radius: 12px;
+  padding: 8px 12px;
+  border-radius: 999px;
   color: var(--sidebar-muted);
   text-decoration: none;
   cursor: pointer;
@@ -256,13 +262,18 @@ a {
   color: var(--sidebar-ink);
 }
 .nav-item.active {
-  background: linear-gradient(180deg, rgba(150, 205, 125, 0.4), rgba(95, 154, 75, 0.22));
-  border-color: rgba(170, 220, 145, 0.35);
-  color: var(--sidebar-ink);
+  background:
+    radial-gradient(120% 90% at 50% -10%, rgba(255, 255, 255, 0.38), transparent 60%),
+    linear-gradient(180deg, #5aa64a, #2f6f2c);
+  border-color: rgba(170, 235, 150, 0.55);
+  color: #fff;
   font-weight: 600;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.3),
-    0 4px 14px rgba(60, 120, 45, 0.28);
+    inset 0 1px 0 rgba(255, 255, 255, 0.45),
+    0 0 18px rgba(96, 190, 84, 0.55);
+}
+.nav-item.active svg {
+  opacity: 1;
 }
 .nav-sep {
   height: 1px;
@@ -308,9 +319,10 @@ main {
   flex-wrap: wrap;
 }
 h1 {
-  font-size: 22px;
+  font-size: 30px;
   margin: 0;
-  font-weight: 650;
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }
 h2 {
   font-size: 15px;
@@ -390,6 +402,7 @@ h3 {
   color: #fff;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    0 0 34px rgba(96, 190, 84, 0.45),
     0 14px 36px rgba(47, 95, 39, 0.4);
 }
 .card.hero::before {
@@ -433,13 +446,17 @@ h3 {
 .card-head h2 {
   margin: 0;
 }
+.card h2 {
+  font-size: 17px;
+  font-weight: 650;
+}
 .stat .label {
   color: var(--ink-2);
   font-size: 13px;
 }
 .stat .value {
-  font-size: 26px;
-  font-weight: 620;
+  font-size: 30px;
+  font-weight: 680;
   margin-top: 2px;
   letter-spacing: -0.01em;
 }
@@ -531,7 +548,9 @@ th {
   font-weight: 600;
   color: var(--ink-2);
   font-size: 12px;
-  background: var(--surface);
+  background: color-mix(in srgb, var(--surface) 72%, transparent);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
   position: sticky;
   top: 0;
 }
@@ -622,7 +641,7 @@ tbody tr:hover td {
   font-size: 13px;
 }
 .bar-track {
-  height: 10px;
+  height: 16px;
   background: var(--surface-2);
   border-radius: 999px;
   position: relative;
@@ -631,16 +650,46 @@ tbody tr:hover td {
   position: relative;
   height: 100%;
   border-radius: 999px;
-  background: var(--s1);
-  overflow: hidden;
+  color: var(--s1);
+  background: currentColor;
+  box-shadow: 0 0 12px color-mix(in srgb, currentColor var(--glow), transparent);
 }
 .bar-fill::after,
 .meter > div::after {
   content: "";
   position: absolute;
-  inset: 0 0 50% 0;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.45), rgba(255, 255, 255, 0.05));
-  border-radius: inherit;
+  inset: 1px 2px 48% 2px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0.08));
+  border-radius: 999px;
+}
+.bar-budget {
+  z-index: 1;
+}
+.donut-split {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 18px 24px;
+}
+.donut-split > .bar-list {
+  flex: 1 1 240px;
+  min-width: 0;
+}
+.donut {
+  position: relative;
+  flex: none;
+  margin: 0 auto;
+}
+.donut-centre {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  text-align: center;
+  pointer-events: none;
+}
+.donut .recharts-sector {
+  filter: drop-shadow(0 0 7px color-mix(in srgb, currentColor var(--glow), transparent));
 }
 .bar-budget {
   position: absolute;
@@ -650,7 +699,7 @@ tbody tr:hover td {
   background: var(--ink-2);
 }
 .meter {
-  height: 8px;
+  height: 10px;
   background: var(--accent-wash);
   border-radius: 999px;
   overflow: hidden;
@@ -896,11 +945,14 @@ tbody tr:hover td {
   .tab-item.active {
     color: var(--sidebar-ink);
     font-weight: 600;
-    background: linear-gradient(180deg, rgba(150, 205, 125, 0.4), rgba(95, 154, 75, 0.22));
-    border-color: rgba(170, 220, 145, 0.35);
+    color: #fff;
+    background:
+      radial-gradient(120% 90% at 50% -10%, rgba(255, 255, 255, 0.38), transparent 60%),
+      linear-gradient(180deg, #5aa64a, #2f6f2c);
+    border-color: rgba(170, 235, 150, 0.55);
     box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.3),
-      0 4px 14px rgba(60, 120, 45, 0.28);
+      inset 0 1px 0 rgba(255, 255, 255, 0.45),
+      0 0 18px rgba(96, 190, 84, 0.55);
   }
   .tab-item .menu-dot {
     top: 5px;
@@ -1433,31 +1485,127 @@ table.coverage th {
 }
 .recharts-area-curve,
 .recharts-line-curve {
-  filter: drop-shadow(0 0 6px color-mix(in srgb, currentColor var(--glow), transparent));
+  filter: drop-shadow(0 0 8px color-mix(in srgb, currentColor var(--glow), transparent));
 }
-.recharts-curve[stroke="var(--s1)"] {
+.recharts-bar-rectangle .recharts-rectangle {
+  filter: drop-shadow(0 0 5px color-mix(in srgb, currentColor calc(var(--glow) * 0.6), transparent));
+}
+.recharts-curve[stroke="var(--s1)"],
+.recharts-rectangle[fill="var(--s1)"],
+.recharts-sector[fill="var(--s1)"] {
   color: var(--s1);
 }
-.recharts-curve[stroke="var(--s2)"] {
+.recharts-rectangle[fill="var(--s1)"],
+.recharts-sector[fill="var(--s1)"] {
+  fill: url(#gloss-s1) var(--s1);
+}
+.recharts-area-area[fill="var(--s1)"] {
+  fill: url(#area-s1) var(--s1);
+  fill-opacity: 1;
+}
+.recharts-curve[stroke="var(--s2)"],
+.recharts-rectangle[fill="var(--s2)"],
+.recharts-sector[fill="var(--s2)"] {
   color: var(--s2);
 }
-.recharts-curve[stroke="var(--s3)"] {
+.recharts-rectangle[fill="var(--s2)"],
+.recharts-sector[fill="var(--s2)"] {
+  fill: url(#gloss-s2) var(--s2);
+}
+.recharts-area-area[fill="var(--s2)"] {
+  fill: url(#area-s2) var(--s2);
+  fill-opacity: 1;
+}
+.recharts-curve[stroke="var(--s3)"],
+.recharts-rectangle[fill="var(--s3)"],
+.recharts-sector[fill="var(--s3)"] {
   color: var(--s3);
 }
-.recharts-curve[stroke="var(--s4)"] {
+.recharts-rectangle[fill="var(--s3)"],
+.recharts-sector[fill="var(--s3)"] {
+  fill: url(#gloss-s3) var(--s3);
+}
+.recharts-area-area[fill="var(--s3)"] {
+  fill: url(#area-s3) var(--s3);
+  fill-opacity: 1;
+}
+.recharts-curve[stroke="var(--s4)"],
+.recharts-rectangle[fill="var(--s4)"],
+.recharts-sector[fill="var(--s4)"] {
   color: var(--s4);
 }
-.recharts-curve[stroke="var(--s5)"] {
+.recharts-rectangle[fill="var(--s4)"],
+.recharts-sector[fill="var(--s4)"] {
+  fill: url(#gloss-s4) var(--s4);
+}
+.recharts-area-area[fill="var(--s4)"] {
+  fill: url(#area-s4) var(--s4);
+  fill-opacity: 1;
+}
+.recharts-curve[stroke="var(--s5)"],
+.recharts-rectangle[fill="var(--s5)"],
+.recharts-sector[fill="var(--s5)"] {
   color: var(--s5);
 }
-.recharts-curve[stroke="var(--s6)"] {
+.recharts-rectangle[fill="var(--s5)"],
+.recharts-sector[fill="var(--s5)"] {
+  fill: url(#gloss-s5) var(--s5);
+}
+.recharts-area-area[fill="var(--s5)"] {
+  fill: url(#area-s5) var(--s5);
+  fill-opacity: 1;
+}
+.recharts-curve[stroke="var(--s6)"],
+.recharts-rectangle[fill="var(--s6)"],
+.recharts-sector[fill="var(--s6)"] {
   color: var(--s6);
 }
-.recharts-curve[stroke="var(--s7)"] {
+.recharts-rectangle[fill="var(--s6)"],
+.recharts-sector[fill="var(--s6)"] {
+  fill: url(#gloss-s6) var(--s6);
+}
+.recharts-area-area[fill="var(--s6)"] {
+  fill: url(#area-s6) var(--s6);
+  fill-opacity: 1;
+}
+.recharts-curve[stroke="var(--s7)"],
+.recharts-rectangle[fill="var(--s7)"],
+.recharts-sector[fill="var(--s7)"] {
   color: var(--s7);
 }
-.recharts-curve[stroke="var(--s8)"] {
+.recharts-rectangle[fill="var(--s7)"],
+.recharts-sector[fill="var(--s7)"] {
+  fill: url(#gloss-s7) var(--s7);
+}
+.recharts-area-area[fill="var(--s7)"] {
+  fill: url(#area-s7) var(--s7);
+  fill-opacity: 1;
+}
+.recharts-curve[stroke="var(--s8)"],
+.recharts-rectangle[fill="var(--s8)"],
+.recharts-sector[fill="var(--s8)"] {
   color: var(--s8);
+}
+.recharts-rectangle[fill="var(--s8)"],
+.recharts-sector[fill="var(--s8)"] {
+  fill: url(#gloss-s8) var(--s8);
+}
+.recharts-area-area[fill="var(--s8)"] {
+  fill: url(#area-s8) var(--s8);
+  fill-opacity: 1;
+}
+.recharts-curve[stroke="var(--other)"],
+.recharts-rectangle[fill="var(--other)"],
+.recharts-sector[fill="var(--other)"] {
+  color: var(--other);
+}
+.recharts-rectangle[fill="var(--other)"],
+.recharts-sector[fill="var(--other)"] {
+  fill: url(#gloss-other) var(--other);
+}
+.recharts-area-area[fill="var(--other)"] {
+  fill: url(#area-other) var(--other);
+  fill-opacity: 1;
 }
 @media (prefers-reduced-transparency: reduce) {
   .card,
