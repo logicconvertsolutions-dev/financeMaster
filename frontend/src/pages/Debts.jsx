@@ -114,7 +114,7 @@ export function DebtsPage({ go }) {
                   }}
                   content={<ChartTooltip valueFormat={moneyCents} labelFormat={(f) => monthLabel(f, true)} />}
                 />
-                <Bar dataKey="amount" name="Interest & fees" fill="var(--s8)" radius={[4, 4, 0, 0]} maxBarSize={24} />
+                <Bar dataKey="amount" name="Interest & fees" fill="var(--s8)" radius={[12, 12, 3, 3]} maxBarSize={24} />
               </BarChart>
             </ResponsiveContainer>
           )}

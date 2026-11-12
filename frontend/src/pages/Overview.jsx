@@ -57,6 +57,13 @@ export function OverviewPage({ go }) {
     : [];
   const o = data.cashflow;
   const u = data.accounts.filter((l) => l.stale);
+  // start the net worth axis just under the lowest month, so the trend shows instead of a flat line
+  const nw = data.networth.map((l) => l.net_worth);
+  const nwLow = Math.min(...nw);
+  const nwRange = Math.max(...nw) - nwLow;
+  const nwStep = nwRange > 0 ? 10 ** Math.floor(Math.log10(nwRange)) : 1;
+  const nwBase = Math.floor((nwLow - nwRange * 0.6) / nwStep) * nwStep;
+  const nwFloor = nwRange > 0 ? (nwLow >= 0 ? Math.max(0, nwBase) : nwBase) : Math.min(0, nwLow);
   return (
     <>
       <PageHead title="Overview" sub={`Balances as of the latest statement for each account · ${data.as_of}`} />
@@ -105,14 +112,14 @@ export function OverviewPage({ go }) {
             >
               <CartesianGrid {...gridProps} />
               <XAxis dataKey="month" tickFormatter={(l) => monthLabel(l)} {...axisProps} />
-              <YAxis {...yAxisProps} />
+              <YAxis {...yAxisProps} domain={[nwFloor, "auto"]} />
               <Tooltip content={<ChartTooltip labelFormat={(l) => monthLabel(l, true)} />} />
               <Area
                 type="monotone"
                 dataKey="net_worth"
                 name="Net worth"
                 stroke="var(--s1)"
-                strokeWidth={2}
+                strokeWidth={3}
                 fill="var(--s1)"
                 fillOpacity={0.1}
                 activeDot={{
@@ -127,6 +134,7 @@ export function OverviewPage({ go }) {
         <Card title="Where your assets are">
           {data.allocation.length ? (
             <BarList
+              colors={true}
               rows={data.allocation.map((l) => ({
                 name: l.name,
                 value: l.value,
@@ -181,8 +189,8 @@ export function OverviewPage({ go }) {
                 left: 0,
                 bottom: 0,
               }}
-              barGap={2}
-              barCategoryGap="30%"
+              barGap={3}
+              barCategoryGap="18%"
             >
               <CartesianGrid {...gridProps} />
               <XAxis dataKey="month" tickFormatter={(l) => monthLabel(l)} {...axisProps} />
@@ -193,12 +201,12 @@ export function OverviewPage({ go }) {
                 }}
                 content={<ChartTooltip labelFormat={(l) => monthLabel(l, true)} />}
               />
-              <Bar dataKey="income" name="Income" fill="var(--s1)" radius={[4, 4, 0, 0]} maxBarSize={24}>
+              <Bar dataKey="income" name="Income" fill="var(--s1)" radius={[12, 12, 3, 3]} maxBarSize={24}>
                 {o.map((l) => (
                   <Cell fillOpacity={l.partial ? 0.35 : 1} key={l.month} />
                 ))}
               </Bar>
-              <Bar dataKey="expenses" name="Spending" fill="var(--s2)" radius={[4, 4, 0, 0]} maxBarSize={24}>
+              <Bar dataKey="expenses" name="Spending" fill="var(--s3)" radius={[12, 12, 3, 3]} maxBarSize={24}>
                 {o.map((l) => (
                   <Cell fillOpacity={l.partial ? 0.35 : 1} key={l.month} />
                 ))}
@@ -213,7 +221,7 @@ export function OverviewPage({ go }) {
               },
               {
                 name: "Spending",
-                color: "var(--s2)",
+                color: "var(--s3)",
               },
             ]}
           />
@@ -243,6 +251,7 @@ export function OverviewPage({ go }) {
         >
           {i.length ? (
             <BarList
+              colors={true}
               rows={i.map(([l, c]) => ({
                 name: l,
                 value: c,

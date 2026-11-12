@@ -93,7 +93,7 @@ export function NetWorthPage({ go }) {
               name="Assets"
               fill="var(--s1)"
               stackId="a"
-              radius={[4, 4, 0, 0]}
+              radius={[12, 12, 3, 3]}
               maxBarSize={24}
               fillOpacity={0.35}
             />
@@ -102,7 +102,7 @@ export function NetWorthPage({ go }) {
               name="Debts"
               fill="var(--s8)"
               stackId="a"
-              radius={[4, 4, 0, 0]}
+              radius={[12, 12, 3, 3]}
               maxBarSize={24}
               fillOpacity={0.35}
             />

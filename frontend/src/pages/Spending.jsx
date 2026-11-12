@@ -5,6 +5,7 @@ import { CategoryOptions } from "../components/CategoryOptions";
 import {
   BarList,
   ChartTooltip,
+  Donut,
   Legend,
   axisProps,
   colorMap,
@@ -42,10 +43,17 @@ export function SpendingPage({ go }) {
       }
       return x;
     });
+    const slices = m
+      .map((S) => ({
+        name: S,
+        value: S === "Other" ? data.categories.reduce((x, j) => x + (m.includes(j.name) ? 0 : j.total), 0) : (v[S] ?? 0),
+      }))
+      .filter((S) => S.value > 0);
     return {
       keys: m,
       colors: g,
       rows: w,
+      slices,
     };
   }, [data]);
   if (!data || !b) {
@@ -253,14 +261,26 @@ export function SpendingPage({ go }) {
             title={`By category · ${data.months.length} month total`}
             extra={<span className="muted small">monthly average on the right</span>}
           >
-            <BarList
-              rows={data.categories.map((v) => ({
-                name: v.name,
-                value: v.total,
-                note: `${money(v.monthly_avg)}/mo`,
-              }))}
-              onClick={(v) => u(v)}
-            />
+            <div className="donut-split">
+              {b.slices.length > 0 && (
+                <Donut
+                  rows={b.slices}
+                  colors={b.colors}
+                  total={b.slices.reduce((v, m) => v + m.value, 0)}
+                  label={data.months.length === 1 ? "this month" : `in ${data.months.length} months`}
+                  onClick={(v) => u(v === "Other" ? "" : v)}
+                />
+              )}
+              <BarList
+                colors={b.colors}
+                rows={data.categories.map((v) => ({
+                  name: v.name,
+                  value: v.total,
+                  note: `${money(v.monthly_avg)}/mo`,
+                }))}
+                onClick={(v) => u(v)}
+              />
+            </div>
           </Card>
           <Card title="Top merchants">
             <table>
